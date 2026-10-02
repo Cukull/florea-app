@@ -1,0 +1,25 @@
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.iml
+.DS_Store
+
+# Env & secrets — jangan commit file asli
+.env
+*.keystore
+*.jks
+google-services.json
+GoogleService-Info.plist
+
+# Supabase local
+supabase/.branches/
+supabase/.temp/
+
+# OS
+Thumbs.db
