@@ -1,7 +1,7 @@
 # Floréa — Feature Specification (POV User)
 
 > Sumber: breakdown board POV User (8 kolom, owner UI: Kanaya Tabitha Putri)
-> Stack: Flutter + Dart + go_router + Riverpod + Supabase
+> Stack: Flutter + Dart + GetX + Supabase
 > Palet warna = contoh sementara, jangan dikunci (lihat TECH_STACK §4)
 
 ## Konvensi Dokumen
@@ -9,7 +9,7 @@
 Setiap fitur wajib mendefinisikan (sesuai guardrails agent):
 
 ```text
-Route → Page/Widget → Provider → Repository/Tabel → Validasi → Loading/Error/Empty → Test
+Route → Page/Widget → Controller (GetX) → Repository/Tabel → Validasi → Loading/Error/Empty → Test
 ```
 
 Status prioritas MVP semester:
@@ -29,7 +29,7 @@ Account Verification, User Goal, Wellness Goal, Initial Mood.
 |---|---|
 | Route | `/login`, `/register`, `/forgot-password`, `/verify`, `/onboarding` |
 | Page | `features/auth/{login,register,forgot_password,verify,onboarding}_page.dart` |
-| Provider | `auth_provider` (session), `onboarding_provider` (goal + initial mood sementara) |
+| Provider | `auth_controller` (session), `onboarding_controller` (goal + initial mood sementara) |
 | Tabel | `auth.users` via Supabase Auth, `profiles` (onboarding_completed, full_name, avatar), `user_goals`, `mood_logs` (initial mood = 1 entry) |
 | Validasi | Email valid, password ≥ 8 char, forgot-password kirim link Supabase |
 | States | Loading saat Auth, error中华 (email sudah terdaftar / kredensial salah), empty tidak ada |
@@ -46,7 +46,7 @@ Board: Name, Email, Password, Confirm Password, Verification Code, User Goal/Int
 |---|---|
 | Route | `/register` (+ `/verify`) |
 | Page | `register_page.dart` (form) + `verify_page.dart` |
-| Provider | `auth_provider` |
+| Provider | `auth_controller` |
 | Tabel | `profiles` (name), `user_goals` (goal/interest, ≥1 goal boleh kosong dulu) |
 | Validasi | Name wajib, confirm password harus sama, kode verifikasi 6 digit |
 | Test | Widget register (mismatch password ditolak) |
@@ -58,9 +58,9 @@ Progress Overview, Notifications, Quick Action.
 
 | Item | Keputusan |
 |---|---|
-| Route | `/home` |
+| Route | `/main` tab 0 (IndexedStack, bukan route sendiri) |
 | Page | `features/home/home_page.dart` + widget `today_overview_card, quick_action_bar, mood_check_sheet` |
-| Provider | `home_provider` (agregasi), reuse `task_provider`, `habit_provider`, `mood_provider` |
+| Provider | `home_controller` (agregasi), reuse `task_controller`, `habit_controller`, `mood_controller` |
 | Tabel (read-only) | `tasks` (deadline hari ini + upcoming), `habit_logs` (today), `mood_logs` (today), `notifications` (unread count) |
 | Aksi | Quick Action → `/planner/create`, mood check → bottom sheet → insert `mood_logs`, tap notif → daftar notif |
 | States | Skeleton saat agregasi, empty ("Belum ada task hari ini"), error retry |
@@ -74,9 +74,9 @@ Status: **Upcoming / In Progress / Completed**.
 
 | Item | Keputusan |
 |---|---|
-| Route | `/planner`, `/planner/create`, `/planner/:id`, `/planner/:id/edit` |
+| Route | `/main` tab 1 + `/planner/create`, `/planner/detail/:id`, `/planner/edit/:id` |
 | Page | `planner_page.dart` (tab: Calendar \| Weekly \| List) + `create_task_page`, `task_detail_page`, `edit_task_page` |
-| Provider | `task_provider` (filter status + tanggal), `category_provider` |
+| Provider | `task_controller` (filter status + tanggal), `category_controller` |
 | Tabel | `task_categories`, `tasks` (`deadline, priority[low|medium|high|urgent], status[pending|in_progress|completed|cancelled], progress 0–100, reminder_at`) |
 | Mapping status board | Upcoming = `pending` + deadline > now · In Progress = `in_progress` · Completed = `completed` |
 | Validasi | Title wajib, deadline ≥ now bila reminder dipakai, progress 0–100 |
@@ -91,9 +91,9 @@ Focus Shield, Soundscape, Eye Rest, Mini Walk, Quick Stretch, Hydration Reminder
 
 | Item | Keputusan |
 |---|---|
-| Route | `/focus`, `/focus/pomodoro`, `/focus/deep`, `/focus/exam`, `/focus/history` |
+| Route | `/main` tab 2 + `/focus/pomodoro`, `/focus/deep`, `/focus/exam`, `/focus/history` |
 | Page | `focus_page.dart` + mode pages + `focus_history_page.dart` |
-| Provider | `focus_provider` (timer state machine: idle → running → paused → finished; wajib survive background via timestamp, bukan counter) |
+| Provider | `focus_controller` (timer state machine: idle → running → paused → finished; wajib survive background via timestamp, bukan counter) |
 | Tabel | `focus_sessions` (`mode[pomodoro|deep_focus|exam_mode], planned_minutes, actual_minutes, started_at, ended_at, status`) |
 | Mode | Pomodoro P0 (25/5), Deep Focus P0 (durasi bebas), Exam Mode P1 (Focus Shield = DND/blocking notif selama sesi) |
 | Pelengkap | Soundscape P2 (asset audio lokal), Eye Rest / Mini Walk / Quick Stretch P1 (timer pendek + panduan teks, tanpa tabel baru), Hydration Reminder P1 (notif berulang) |
@@ -106,9 +106,9 @@ Wellness Progress, Daily Wellness, Wellness Reminder.
 
 | Item | Keputusan |
 |---|---|
-| Route | `/wellness`, `/wellness/mood`, `/wellness/habits`, `/wellness/sleep` |
+| Route | `/main` tab 3 + `/wellness/mood`, `/wellness/habits`, `/wellness/sleep` |
 | Page | `wellness_page.dart` (tab Mood \| Habit \| Sleep) + sub-pages |
-| Provider | `mood_provider`, `habit_provider`, `sleep_provider` |
+| Provider | `mood_controller`, `habit_controller`, `sleep_controller` |
 | Tabel | `mood_logs` (score 1–5 + note), `habits` + `habit_logs` (unik per hari), `sleep_logs` (bedtime/wake/quality 1–5) |
 | Analitik | Mood Analytics + Wellness Progress = P1 via `fl_chart` (agregasi 7/30 hari). Daily Wellness = ringkasan read-only. Reminder via `notification_service` |
 | Validasi | Mood 1–5 wajib, sleep wake > bedtime, habit 1 log/hari |
@@ -122,9 +122,9 @@ Privacy & Security, Account Settings, Logout (tertulis 2x di board = 1 aksi).
 
 | Item | Keputusan |
 |---|---|
-| Route | `/profile`, `/profile/edit`, `/profile/settings`, `/profile/achievements` |
+| Route | `/main` tab 4 + `/profile/edit`, `/profile/settings`, `/profile/achievements` |
 | Page | `profile_page.dart` + `edit_profile_page`, `settings_page`, `achievements_page` |
-| Provider | `user_provider`, `settings_provider` (theme, pref notif di `shared_preferences`) |
+| Controller | `user_controller`, `settings_controller` (theme, pref notif di `GetStorage`) |
 | Tabel | `profiles`, `user_achievements` + `achievements` (read), statistik = agregasi `tasks/focus_sessions/habit_logs/mood_logs` (tanpa tabel baru) |
 | Personalized Insight | P2 (rule sederhana dulu, mis. "3 hari fokus terbaikmu…"; tanpa LLM) |
 | Settings | Edit nama/avatar (Storage bila perlu) P0, Notifications toggle P0, Privacy & Security (ganti password via Supabase) P1, Logout P0 |
@@ -132,15 +132,15 @@ Privacy & Security, Account Settings, Logout (tertulis 2x di board = 1 aksi).
 
 ---
 
-## Peta Route Final (go_router)
+## Peta Route Final (GetX named routes)
 
 ```text
 /login /register /forgot-password /verify /onboarding
-/home
-/planner /planner/create /planner/:id /planner/:id/edit
-/focus /focus/pomodoro /focus/deep /focus/exam /focus/history
-/wellness /wellness/mood /wellness/habits /wellness/sleep
-/profile /profile/edit /profile/settings /profile/achievements
+/main  (shell bottom-tab: home | planner | focus | wellness | profile via IndexedStack)
+/planner/create /planner/detail/:id /planner/edit/:id
+/focus/pomodoro /focus/deep /focus/exam /focus/history
+/wellness/mood /wellness/habits /wellness/sleep
+/profile/edit /profile/settings /profile/achievements
 ```
 
 ## Peta Tabel Final

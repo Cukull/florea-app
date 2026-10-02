@@ -1,6 +1,6 @@
 # Floréa — Auth Flow (Supabase + Flutter)
 
-> Stack: `supabase_flutter` + `flutter_riverpod` + `go_router`
+> Stack: `supabase_flutter` + `GetX` (`GetMaterialApp` + `AuthMiddleware` + `AuthController`)
 > Terkait: `FEATURE_SPECIFICATION.md` (F1/F2), `DATABASE_SCHEMA.md` (profiles, user_goals)
 
 ## 1. Mode Auth yang Didukung (MVP)
@@ -19,13 +19,13 @@ P1: Google OAuth (ditunda — butuh SHA-1 Android + OAuth Client ID)
 App start
   → Supabase.initialize
   → cek session
-  ├─ ada session + profiles.onboarding_completed = true  → /home
+  ├─ ada session + profiles.onboarding_completed = true  → /main
   ├─ ada session + onboarding_completed = false          → /onboarding
   └─ tidak ada session                                   → /login
 
 /login ──(belum punya akun)──> /register ──> /verify ──> /login
 /login ──(lupa password)─────> /forgot-password ──(link email)──> /login
-/login ──(sukses + onboarding false)──> /onboarding ──(simpan goal + initial mood)──> /home
+/login ──(sukses + onboarding false)──> /onboarding ──(simpan goal + initial mood)──> /main
 ```
 
 ## 3. Detail per Screen
@@ -56,28 +56,33 @@ Reset password finalisasi di browser/webview, lalu user login ulang di app.
 ### 3.5 `/onboarding`
 Langkah: (1) user goal → insert `user_goals`, (2) wellness goal → insert `user_goals` kedua atau kolom di profiles (pilih: tabel `user_goals`, bedakan via kolom `kind` bila perlu — tambah hanya jika disetujui),
 (3) initial mood → insert 1 baris `mood_logs`.
-Tombol Selesai → `profiles.onboarding_completed = true` → `/home`.
+Tombol Selesai → `profiles.onboarding_completed = true` → `/main`.
 Onboarding bisa di-skip? **Tidak untuk MVP** — flag harus true agar Home punya data awal. Tombol Lewati hanya bila tim setuju (tambah backlog).
 
-## 4. Session & Protected Route (go_router)
+## 4. Session & Protected Route (GetX AuthMiddleware)
 
 ```dart
-// Pseudocode redirect
-redirect: (ctx, state) {
-  final loggedIn = supabase.auth.currentSession != null;
-  final onboardingDone = ref.read(onboardingDoneProvider); // cache dari profiles
-  final goingAuth = state.uri.path.startsWith('/login')
-      || state.uri.path.startsWith('/register');
-  if (!loggedIn && !goingAuth) return '/login';
-  if (loggedIn && !onboardingDone && state.uri.path != '/onboarding') return '/onboarding';
-  if (loggedIn && onboardingDone && goingAuth) return '/home';
-  return null;
+// lib/app/middlewares/auth_middleware.dart
+class AuthMiddleware extends GetMiddleware {
+  @override
+  RouteSettings? redirect(String? route) {
+    final auth = Get.find<AuthController>(); // isLoggedIn + onboardingDone (cache profiles)
+    final goingAuth = route == Routes.login || route == Routes.register;
+    if (!auth.isLoggedIn.value && !goingAuth) return const RouteSettings(name: Routes.login);
+    if (auth.isLoggedIn.value && !auth.onboardingDone.value && route != Routes.onboarding) {
+      return const RouteSettings(name: Routes.onboarding);
+    }
+    if (auth.isLoggedIn.value && auth.onboardingDone.value && goingAuth) {
+      return const RouteSettings(name: Routes.main);
+    }
+    return null;
+  }
 }
 ```
 
-- Refresh session: `supabase.auth.onAuthStateChange` → invalidate `auth_provider`.
+- Refresh session: `supabase.auth.onAuthStateChange` → update `AuthController`.
 - Token disimpan aman oleh SDK; data sensitif tambahan → `flutter_secure_storage`.
-- Logout: `signOut()` → clear provider → `/login`.
+- Logout: `signOut()` → reset controller → `Get.offAllNamed(Routes.login)`.
 
 ## 5. RLS Terkait Auth
 
@@ -96,7 +101,7 @@ redirect: (ctx, state) {
 ## 7. Test Minimal
 
 - Unit: validator email/password/confirm.
-- Widget: register mismatch ditolak, login sukses → redirect home (mock repository).
+- Widget: register mismatch ditolak, login sukses → redirect /main (mock controller).
 - Manual: register → verify → onboarding → home → logout → login.
 
 ## 8. Yang Ditunda (P1/P2)

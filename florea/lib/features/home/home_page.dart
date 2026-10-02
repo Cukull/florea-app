@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+
+import '../../controllers/main_controller.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -10,10 +11,22 @@ class HomePage extends StatelessWidget {
       body: Wrap(
         spacing: 12,
         children: [
-          ElevatedButton(onPressed: () => context.go('/planner'), child: const Text('Planner')),
-          ElevatedButton(onPressed: () => context.go('/focus'), child: const Text('Focus')),
-          ElevatedButton(onPressed: () => context.go('/wellness'), child: const Text('Wellness')),
-          ElevatedButton(onPressed: () => context.go('/profile'), child: const Text('Profile')),
+          ElevatedButton(
+            onPressed: () => MainController.to.goTab(1),
+            child: const Text('Planner'),
+          ),
+          ElevatedButton(
+            onPressed: () => MainController.to.goTab(2),
+            child: const Text('Focus'),
+          ),
+          ElevatedButton(
+            onPressed: () => MainController.to.goTab(3),
+            child: const Text('Wellness'),
+          ),
+          ElevatedButton(
+            onPressed: () => MainController.to.goTab(4),
+            child: const Text('Profile'),
+          ),
         ],
       ),
     );

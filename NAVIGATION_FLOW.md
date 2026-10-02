@@ -1,8 +1,8 @@
-# Floréa — Navigation Flow (go_router)
+# Floréa — Navigation Flow (GetX)
 
 > Terkait: `FEATURE_SPECIFICATION.md`, `AUTH_FLOW.md`
-> Router saat ini (`florea/lib/app/router.dart`) masih daftar `GoRoute` datar —
-> naikkan ke `StatefulShellRoute` begitu bottom-tab Figma final.
+> Pola: `GetMaterialApp` + `GetPage` (`app_pages.dart`) + `AuthMiddleware` + `MainShell` (IndexedStack).
+> Satu sistem router saja — `go_router` dilarang agar tidak dobel.
 
 ## 1. Struktur Navigasi
 
@@ -10,15 +10,11 @@
 (auth) — tanpa tab bar
   /login /register /forgot-password /verify /onboarding
 
-(tabs) — StatefulShellRoute, 5 tab sesuai board
-  /home
-  /planner
-  /focus
-  /wellness
-  /profile
+(main shell) — MainShell: IndexedStack + BottomNavigationBar, 5 tab sesuai board
+  tab 0 Home · tab 1 Planner · tab 2 Focus · tab 3 Wellness · tab 4 Profil
 
-detail (stack di atas tab aktif)
-  /planner/create /planner/:id /planner/:id/edit
+detail (push di atas stack aktif via Get.toNamed)
+  /planner/create /planner/detail/:id /planner/edit/:id
   /focus/pomodoro /focus/deep /focus/exam /focus/history
   /wellness/mood /wellness/habits /wellness/sleep
   /profile/edit /profile/settings /profile/achievements
@@ -26,53 +22,60 @@ detail (stack di atas tab aktif)
 
 Urutan tab disarankan mengikuti Figma: Home, Planner, Focus, Wellness, Profile.
 Ikon tab: `lucide_icons` (Home, CalendarDays, Timer, HeartPulse, User).
+Pindah tab = `MainController.to.goTab(i)` (tidak menumpuk route); halaman detail = `Get.toNamed(...)`.
 
 ## 2. Tabel Route ↔ Board
 
 | Board (POV User) | Route | Tab? |
 |---|---|---|
-| Login/Register/Onboarding, Create Account | `/login /register /forgot-password /verify /onboarding` | bukan tab (redirect auth, lihat AUTH_FLOW) |
-| Home Dashboard | `/home` | tab 1 |
-| Planner Dashboard + status task | `/planner…` | tab 2 |
-| Focus Dashboard | `/focus…` | tab 3 |
-| Wellness Dashboard | `/wellness…` | tab 4 |
-| Profile Dashboard | `/profile…` | tab 5 |
+| Login/Register/Onboarding, Create Account | `/login /register /forgot-password /verify /onboarding` | bukan tab (guard middleware, lihat AUTH_FLOW) |
+| Home Dashboard | `/main` tab 0 | ya |
+| Planner Dashboard + status task | `/main` tab 1 + detail planner | ya |
+| Focus Dashboard | `/main` tab 2 + mode/history | ya |
+| Wellness Dashboard | `/main` tab 3 + sub-pages | ya |
+| Profile Dashboard | `/main` tab 4 + edit/settings/achievements | ya |
 
 ## 3. Alur Kunci
 
 ### 3.1 Cold start → tab
-Splash (`/`, tentukan di main) → redirect auth (AUTH_FLOW §4) → tab terakhir atau `/home`.
-State tab tidak perlu persist untuk MVP (kembali ke `/home` tiap restart).
+Splash (`AuthController` cek session saat init) → middleware redirect (AUTH_FLOW §4) → `/main` (tab 0) atau `/onboarding` atau `/login`.
+State tab tidak perlu persist untuk MVP (kembali ke tab 0 tiap restart).
 
 ### 3.2 Quick Action (Home)
-`+ Task` → `/planner/create` · `Mulai Fokus` → `/focus` · `Catat Mood` → bottom sheet di `/home` (tanpa pindah route).
-Setelah simpan: `context.pop()` + snackbar + invalidate provider terkait.
+`+ Task` → `Get.toNamed('/planner/create')` · `Mulai Fokus` → `goTab(2)` · `Catat Mood` → bottom sheet (`Get.bottomSheet`, tanpa pindah route).
+Setelah simpan: `Get.back()` + snackbar + `Get.find<TaskController>().refreshData()`.
 
 ### 3.3 Planner
-List → tap item → `/planner/:id` → Edit → `/planner/:id/edit` → simpan → `pop` 2x kembali ke list (atau `go('/planner')`).
-Filter status (Upcoming/In Progress/Completed) = state lokal tab, bukan route terpisah (hindari duplikasi history).
+List → tap item → `Get.toNamed('/planner/detail/123')` → Edit → `Get.toNamed('/planner/edit/123')` → simpan → `Get.back()` / `Get.offNamed` kembali ke list.
+Filter status (Upcoming/In Progress/Completed) = Rx state lokal di `TaskController`, bukan route terpisah (hindari duplikasi history).
 
 ### 3.4 Focus
-`/focus` → pilih mode → `/focus/{pomodoro,deep,exam}` → timer jalan → selesai → dialog ringkasan → History (`/focus/history`).
+Tab Focus → pilih mode → `Get.toNamed('/focus/pomodoro')` → timer jalan di `FocusController` → selesai → dialog ringkasan (`Get.dialog`) → History.
 Tombol back saat timer jalan → dialog konfirmasi "Batalkan sesi?" (sesi tersimpan `cancelled` bila sudah > 1 menit, sesuai kesepakatan tim).
 
 ### 3.5 Notifikasi → deep link
-Tap notif task/deadline → `/planner/:id`; habit → `/wellness/habits`; sleep/wellness → `/wellness`.
-Skema: path + `id` sebagai parameter (lihat `notification_service` saat implementasi).
+Tap notif task/deadline → `/planner/detail/:id`; habit → `/wellness/habits`; sleep/wellness → `/wellness`.
+Implementasi di `notification_service` + `Get.toNamed` (payload berisi route).
 
 ## 4. Aturan Umum
 
-1. **Auth guard** di `redirect` (jangan cek session di tiap page).
-2. Detail selalu `push` (`context.push`), pindah tab selalu `go` (tidak menumpuk stack).
-3. Form kotor (unsaved changes) → `onExit`/dialog konfirmasi sebelum `pop`.
-4. Transisi: default Material; animasi khusus (`flutter_animate`) hanya untuk Figma-flagged transitions.
-5. Back Android: keluar app hanya dari tab root; dari detail → kembali ke tab.
+1. **Auth guard** di `AuthMiddleware` (jangan cek session di tiap page).
+2. Detail selalu `Get.toNamed`, pindah tab selalu `goTab`/`offAllNamed` (tidak menumpuk stack).
+3. Tutup auth flow dengan `Get.offAllNamed` (login → main, logout → login) agar back tidak kembali ke form.
+4. Form kotor (unsaved changes) → dialog konfirmasi sebelum `Get.back()`.
+5. Transisi: default GetX; animasi khusus (`flutter_animate`) hanya untuk Figma-flagged transitions.
+6. Back Android: keluar app hanya dari `/main`; dari detail → kembali ke stack sebelumnya.
+7. DI hanya via `Bindings`; dilarang `Get.put` di dalam widget.
 
-## 5. Upgrade Router (TODO saat implementasi tab)
+## 5. Struktur File Routing
 
 ```dart
-// Target: StatefulShellRoute.indexedStack dengan 5 branch.
-// File tetap: lib/app/router.dart. Jangan pecah router per fitur untuk MVP.
+// Tetap di lib/app/. Jangan pecah route per fitur untuk MVP.
+app_routes.dart       // konstanta Routes.*
+app_pages.dart        // List<GetPage> + middlewares + bindings
+main_shell.dart       // IndexedStack 5 tab
+middlewares/auth_middleware.dart
+bindings/app_bindings.dart
 ```
 
 ## 6. Pemetaan Prototype Figma
@@ -80,8 +83,8 @@ Skema: path + `id` sebagai parameter (lihat `notification_service` saat implemen
 Begitu folder export Figma tersedia, isi tabel ini (1 baris per screen Figma):
 
 ```text
-| Screen Figma | Route | File Dart | Status |
-| Splash | / | ... | TODO |
+| Screen Figma | Route GetX | File Dart | Status |
+| Splash | /login (redirect) | ... | TODO |
 ```
 
 Saya yang konversi HTML/CSS → Widget per screen mengikuti tabel ini.

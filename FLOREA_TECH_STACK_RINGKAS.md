@@ -15,14 +15,14 @@ Design system: Fraunces (heading) + DM Sans (body). Warna contoh sementara (JANG
 
 | Kategori | Teknologi |
 |---|---|
-| Mobile | Flutter + Dart + go_router |
+| Mobile | Flutter + Dart + GetX routing |
 | UI | Material 3 Theme, google_fonts, lucide_icons, flutter_svg, flutter_animate |
-| State | flutter_riverpod (UI lokal + server via AsyncNotifier) |
+| State + DI | GetX (GetxController + Rx + Bindings) |
 | Backend | Supabase (Auth, PostgreSQL, RLS, Storage, Edge Functions) |
 | Network | supabase_flutter (+ Dio bila perlu REST custom) |
 | Form | Form built-in + form_builder_validators |
 | Notifikasi | flutter_local_notifications |
-| Lokal | shared_preferences + flutter_secure_storage |
+| Lokal | GetStorage + flutter_secure_storage |
 | Chart | fl_chart |
 | Tanggal | intl + timezone |
 | Testing | flutter_test + mocktail (integration_test opsional) |
@@ -31,7 +31,7 @@ Design system: Fraunces (heading) + DM Sans (body). Warna contoh sementara (JANG
 | Build | flutter build apk/appbundle/ipa (target awal: Android) |
 | Dev | OpenCode / AI-assisted |
 
-Tidak dipakai untuk MVP: React Native/Expo, Bloc/GetX, Express, MongoDB, GraphQL, Firebase ganda, AI/LLM.
+Tidak dipakai untuk MVP: React Native/Expo, Riverpod/Bloc, go_router, Express, MongoDB, GraphQL, Firebase ganda, AI/LLM.
 
 ## 3. Rekomendasi
 
@@ -41,9 +41,9 @@ Tidak dipakai untuk MVP: React Native/Expo, Bloc/GetX, Express, MongoDB, GraphQL
 
 ## 4. Checklist Persetujuan
 
-- [ ] Flutter + Dart + go_router
+- [ ] Flutter + Dart + GetX routing
 - [ ] Material 3 + google_fonts + lucide_icons
-- [ ] flutter_riverpod + supabase_flutter
+- [ ] GetxController + Bindings + supabase_flutter
 - [ ] PostgreSQL + RLS + Supabase Auth
 - [ ] flutter_local_notifications, fl_chart, intl
 - [ ] dart analyze + format + GitHub + flutter build

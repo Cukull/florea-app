@@ -87,17 +87,18 @@ Fitur utama yang teridentifikasi dari dokumen desain:
 |---|---|---:|---|
 | Mobile framework | **Flutter** | ✅ Proposed | Cross-platform mobile application (Android + iOS) |
 | Programming language | **Dart** | ✅ Proposed | Application source code, null-safety |
-| Navigation | **go_router** | ✅ Proposed | Declarative routing, deep-link, auth redirect |
+| Navigation | **GetX routing** | ✅ Proposed | Named routes, auth middleware, snackbar/dialog tanpa context |
+| State management | **GetX** | ✅ Proposed | Controllers + Rx state + dependency injection |
 
 ### Decision
 
 Use:
 
 ```text
-Flutter + Dart + go_router
+Flutter + Dart + GetX (routing + state + DI)
 ```
 
-Alasan pilih go_router: router resmi Flutter, mendukung nested navigation (tabs), auth redirect (login → home), dan deep-link notifikasi. Alternatif `auto_route` ditolak agar tidak menambah codegen yang berat untuk MVP.
+Alasan pilih GetX: satu paket routing + state + DI sehingga boilerplate minimal dan cepat untuk deadline semester. Bottom-tab memakai `IndexedStack` + `MainController` (state tiap tab terjaga, tanpa nested router untuk MVP). Auth guard via `AuthMiddleware`. `go_router`/`auto_route` ditolak agar tidak ada dua sistem router dalam satu app.
 
 ---
 
@@ -171,18 +172,29 @@ Nilai di atas hanya contoh sementara dari dokumen desain Floréa (tidak dikunci,
 
 ## 5.1 Client / Global State
 
-**flutter_riverpod**
+**GetX (GetxController + Rx)**
 
-Recommended providers:
+Recommended controllers:
 
 ```text
-providers/
-├── auth_provider.dart
-├── user_provider.dart
-├── task_provider.dart
-├── focus_provider.dart
-├── wellness_provider.dart
-└── settings_provider.dart
+controllers/
+├── auth_controller.dart
+├── user_controller.dart
+├── task_controller.dart
+├── focus_controller.dart
+├── wellness_controller.dart
+└── main_controller.dart   # bottom-tab index + cross-tab navigation
+```
+
+Dependency injection via **Bindings** (satu binding per fitur, mis. `AuthBinding`):
+
+```dart
+class AuthBinding extends Bindings {
+  @override
+  void dependencies() {
+    Get.lazyPut<AuthController>(() => AuthController(repo: Get.find()));
+  }
+}
 ```
 
 ### Responsibilities
@@ -194,32 +206,32 @@ providers/
 - Wellness interaction state
 - App settings
 
-Alasan pilih Riverpod (bukan Bloc/GetX/Provider): API paling sederhana untuk MVP, compile-safe, mudah di-test, dan mudah dibaca AI agent. Bloc terlalu boilerplate untuk deadline semester. GetX ditolak karena menggabungkan routing + DI + state secara implisit sehingga sulit di-review.
+Alasan pilih GetX (bukan Bloc/Riverpod): satu paket routing + state + DI, boilerplate minimal untuk deadline semester, dan umum dipakai tim kampus Indonesia. Bloc terlalu boilerplate untuk MVP.
 
 ## 5.2 Server State / Data Fetching
 
-**Riverpod + Dio** (atau langsung `supabase_flutter` untuk query Supabase)
+**GetX Controller + Dio** (atau langsung `supabase_flutter` untuk query Supabase)
 
 Gunakan untuk:
 
 - Fetching backend data
-- Caching (via `FutureProvider` / `AsyncNotifier`)
-- Refetching / invalidation
-- Loading / error states
+- Caching (via field `Rx` + `refresh()`/`update()`)
+- Refetching / invalidasi
+- Loading / error states (`isLoading` / `errorMessage` Rx)
 - Mutations
-- Query invalidation
+- Invalidasi silang via `Get.find<OtherController>().refreshData()`
 
 Pemisahan yang dianjurkan:
 
 ```text
-Riverpod AsyncNotifier / FutureProvider
-→ remote / server state (Supabase)
+Controller + Repository (Supabase/Dio)
+→ remote / server state
 
-Riverpod Notifier / StateProvider
+Rx fields lokal di Controller
 → local UI / client state
 ```
 
-Aturan: jangan panggil Supabase langsung dari widget. Lewat `repositories/` + `providers/`.
+Aturan: jangan panggil Supabase langsung dari widget. Lewat `repositories/` + `controllers/`.
 
 ---
 
@@ -385,10 +397,10 @@ Push dari server (FCM) bersifat opsional dan hanya ditambahkan bila reminder lok
 
 | Technology | Status | Purpose |
 |---|---:|---|
-| **shared_preferences** | ✅ Proposed | Non-sensitive local preferences and lightweight persistence |
+| **GetStorage** | ✅ Proposed | Non-sensitive local preferences and lightweight persistence |
 | **flutter_secure_storage** | ✅ Proposed | Sensitive local values that require secure storage |
 
-Contoh data shared_preferences:
+Contoh data GetStorage:
 
 ```text
 onboarding_completed
@@ -589,8 +601,14 @@ florea/
 ├── lib/
 │   ├── main.dart
 │   ├── app/
-│   │   ├── app.dart
-│   │   └── router.dart          # go_router config
+│   │   ├── app.dart             # GetMaterialApp
+│   │   ├── app_routes.dart      # konstanta nama route
+│   │   ├── app_pages.dart       # GetPage list + middlewares + bindings
+│   │   ├── main_shell.dart      # bottom-tab IndexedStack
+│   │   ├── bindings/
+│   │   │   └── app_bindings.dart
+│   │   └── middlewares/
+│   │       └── auth_middleware.dart
 │   │
 │   ├── features/
 │   │   ├── auth/
@@ -627,12 +645,13 @@ florea/
 │   │   ├── app_card.dart
 │   │   └── task_card.dart
 │   │
-│   ├── providers/               # Riverpod
-│   │   ├── auth_provider.dart
-│   │   ├── task_provider.dart
-│   │   ├── focus_provider.dart
-│   │   ├── wellness_provider.dart
-│   │   └── settings_provider.dart
+│   ├── controllers/             # GetxController
+│   │   ├── auth_controller.dart
+│   │   ├── main_controller.dart
+│   │   ├── task_controller.dart
+│   │   ├── focus_controller.dart
+│   │   ├── wellness_controller.dart
+│   │   └── settings_controller.dart
 │   │
 │   ├── repositories/            # Supabase queries
 │   │   ├── auth_repository.dart
@@ -703,13 +722,14 @@ Prioritas referensi:
 3. **Do not replace existing Figma UI with an unrelated design.**
 4. **Use reusable widgets.**
 5. **Keep page files focused on presentation and interaction.**
-6. **Keep business logic in repositories/providers/services/utils where appropriate.**
-7. **Keep backend queries separated from UI widgets.**
-8. **Use Dart null-safety and strong types instead of `dynamic` whenever practical.**
-9. **Do not hardcode secrets.**
-10. **Run analyze, format, and relevant tests after changes.**
-11. **Make small, reviewable changes instead of rewriting large sections unnecessarily.**
-12. **Ask for confirmation before introducing a new package when an existing dependency can solve the problem.**
+6. **Keep business logic in repositories/controllers/services/utils where appropriate.**
+7. **Use Bindings for DI; never call Get.put inside widgets.**
+8. **Keep backend queries separated from UI widgets.**
+9. **Use Dart null-safety and strong types instead of `dynamic` whenever practical.**
+10. **Do not hardcode secrets.**
+11. **Run analyze, format, and relevant tests after changes.**
+12. **Make small, reviewable changes instead of rewriting large sections unnecessarily.**
+13. **Ask for confirmation before introducing a new package when an existing dependency can solve the problem.**
 
 ---
 
@@ -763,7 +783,8 @@ Microservices
 Firebase alongside Supabase (kecuali FCM bila terbukti perlu)
 LLM / AI integration
 Complex realtime architecture
-Bloc / GetX (gunakan Riverpod agar konsisten)
+go_router / auto_route (gunakan GetX routing agar satu sistem)
+Riverpod / Bloc (gunakan GetX agar konsisten)
 ```
 
 This is intended to keep the semester project maintainable and focused on the documented Floréa feature set.
@@ -782,7 +803,7 @@ Language
 
 Mobile
 → Flutter
-→ go_router
+→ GetX routing
 
 UI
 → Material 3 Theme
@@ -792,8 +813,8 @@ UI
 → flutter_animate
 → SafeArea (built-in)
 
-State
-→ flutter_riverpod
+State + DI
+→ GetX (GetxController + Rx + Bindings)
 
 Network
 → Dio (bila perlu REST custom)
@@ -867,16 +888,16 @@ Please confirm the following before project initialization:
 
 - [ ] Flutter
 - [ ] Dart
-- [ ] go_router
+- [ ] GetX (routing + state + DI)
 - [ ] Material 3 Theme + google_fonts
 - [ ] lucide_icons + flutter_svg
-- [ ] flutter_riverpod
+- [ ] GetxController + Bindings
 - [ ] supabase_flutter
 - [ ] PostgreSQL
 - [ ] Supabase Auth
 - [ ] Row Level Security
 - [ ] flutter_local_notifications
-- [ ] shared_preferences
+- [ ] GetStorage
 - [ ] flutter_secure_storage
 - [ ] form_builder_validators
 - [ ] intl
@@ -925,3 +946,4 @@ The feature list, product purpose, target users/stakeholders, design typography,
 - Chart: Gifted Charts → fl_chart. Date: date-fns → intl.
 - Test: Jest/RNTL/Detox → flutter_test + mocktail + integration_test.
 - Quality: ESLint/Prettier → dart analyze/format + very_good_analysis. Build: EAS → flutter build.
+- Revisi 2: state + routing diganti ke Full GetX (GetMaterialApp + GetPage + AuthMiddleware + Bindings + GetStorage) per permintaan tim; go_router + Riverpod dikeluarkan.

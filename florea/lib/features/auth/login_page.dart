@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:get/get.dart';
+
+import '../../app/app_routes.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -8,7 +10,8 @@ class LoginPage extends StatelessWidget {
     return Scaffold(
       body: Center(
         child: ElevatedButton(
-          onPressed: () => context.go('/home'),
+          // Dummy: setelah AuthController terisi, pakai offAllNamed ke /main.
+          onPressed: () => Get.offAllNamed(Routes.main),
           child: const Text('Masuk (dummy) ke Home'),
         ),
       ),
