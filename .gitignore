@@ -21,5 +21,14 @@ GoogleService-Info.plist
 supabase/.branches/
 supabase/.temp/
 
+# Flutter SDK lokal di dalam repo — JANGAN commit (ratusan MB/GB)
+# NOTE: pola di-anchor agar tidak mengabaikan florea/android/app/src/
+**/florea/src/
+florea/florea/
+
+# Dokumen & desain besar — tidak ikut repo kode (sesuai pilihan user)
+*.pdf
+CAPSTONE PROJECT UI_UX FLOREA/
+
 # OS
 Thumbs.db
