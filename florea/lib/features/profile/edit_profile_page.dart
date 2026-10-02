@@ -4,5 +4,5 @@ class EditProfilePage extends StatelessWidget {
   const EditProfilePage({super.key});
   @override
   Widget build(BuildContext context) =>
-      Scaffold(appBar: AppBar(title: const Text('Edit Profil')), body: const Center(child: Text('Form profil (TODO F7)'))));
+      Scaffold(appBar: AppBar(title: const Text('Edit Profil')), body: const Center(child: Text('Form profil (TODO F7)')));
 }
