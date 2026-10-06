@@ -14,7 +14,6 @@ dependencies:
   supabase_flutter: ^2.8.0
   dio: ^5.7.0
   google_fonts: ^6.2.1
-  lucide_icons: ^0.257.0
   flutter_svg: ^2.0.10
   flutter_animate: ^4.5.0
   fl_chart: ^0.68.0
@@ -25,6 +24,7 @@ dependencies:
   flutter_secure_storage: ^9.2.2
   form_builder_validators: ^11.0.0
   flutter_dotenv: ^5.1.0
+  lucide_icons_flutter: ^3.1.21
 
 dev_dependencies:
   flutter_test:
