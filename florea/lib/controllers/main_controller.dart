@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
 
-import '../app/app_routes.dart';
+import 'package:florea/app/app_routes.dart';
 
 /// Index bottom-tab + navigasi lintas tab.
 /// Tab: 0 home · 1 planner · 2 focus · 3 wellness · 4 profile.
