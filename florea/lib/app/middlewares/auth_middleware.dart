@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../controllers/auth_controller.dart';
-import '../app_routes.dart';
+import 'package:florea/controllers/auth_controller.dart';
+import 'package:florea/app/app_routes.dart';
 
 /// Guard auth untuk route protected. Ditempel via `middlewares`
 /// di tiap GetPage (lihat app_pages.dart).

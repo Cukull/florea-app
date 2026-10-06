@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../app/app_routes.dart';
+import 'package:florea/app/app_routes.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});

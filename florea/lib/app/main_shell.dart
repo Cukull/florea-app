@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../controllers/main_controller.dart';
-import '../features/focus/focus_page.dart';
-import '../features/home/home_page.dart';
-import '../features/planner/planner_page.dart';
-import '../features/profile/profile_page.dart';
-import '../features/wellness/wellness_page.dart';
+import 'package:florea/controllers/main_controller.dart';
+import 'package:florea/features/focus/focus_page.dart';
+import 'package:florea/features/home/home_page.dart';
+import 'package:florea/features/planner/planner_page.dart';
+import 'package:florea/features/profile/profile_page.dart';
+import 'package:florea/features/wellness/wellness_page.dart';
 
 /// Shell bottom-tab. Tab diganti via MainController (IndexedStack),
 /// bukan route terpisah — state tiap tab terjaga.
